@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+
+  <!-- PWA essencial -->
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="EstomaCare"/>
+  <meta name="application-name" content="EstomaCare"/>
+  <meta name="theme-color" content="#1A5276"/>
+  <meta name="description" content="Curativos e Estomaterapia — CHPBG Guarulhos"/>
+
+  <title>EstomaCare</title>
+
+  <!-- Manifest PWA (referencia arquivo externo no GitHub Pages) -->
+  <link rel="manifest" href="manifest.json"/>
+
+  <!-- Ícones iOS -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"/>
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png"/>
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+  <link rel="shortcut icon" href="icon-192.png"/>
+
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{height:100%;}
+    body{
+      height:100%;background:#F0F4F8;
+      font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+      -webkit-tap-highlight-color:transparent;
+      -webkit-font-smoothing:antialiased;
+      overscroll-behavior:none;
+      padding-top:env(safe-area-inset-top);
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+    #root{min-height:100vh;}
+    #splash{
+      position:fixed;inset:0;z-index:9999;
+      background:linear-gradient(160deg,#1A5276 0%,#154360 100%);
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:18px;
+      transition:opacity 0.6s ease;
+    }
+    #splash.hide{opacity:0;pointer-events:none;}
+    #splash img{
+      width:120px;height:120px;border-radius:28px;
+      box-shadow:0 12px 40px rgba(0,0,0,0.4);
+      animation:popIn 0.5s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes popIn{
+      from{transform:scale(0.5);opacity:0;}
+      to{transform:scale(1);opacity:1;}
+    }
+    #splash .titulo{color:#fff;font-size:30px;font-weight:800;}
+    #splash .titulo span{color:#1ABC9C;}
+    #splash .sub{color:#7FB3D3;font-size:12px;text-align:center;line-height:1.6;}
+    #splash .loader{display:flex;gap:9px;margin-top:6px;}
+    #splash .dot{
+      width:9px;height:9px;border-radius:50%;background:#1ABC9C;
+      animation:bounce 1.1s ease-in-out infinite;
+    }
+    #splash .dot:nth-child(2){animation-delay:.18s;}
+    #splash .dot:nth-child(3){animation-delay:.36s;}
+    @keyframes bounce{
+      0%,100%{transform:scale(0.7);opacity:0.4;}
+      50%{transform:scale(1.3);opacity:1;}
+    }
+    #splash .versao{
+      position:absolute;bottom:20px;
+      color:#2E86C1;font-size:10px;letter-spacing:1px;
+    }
+    /* Banner instalar app */
+    #install-banner{
+      display:none;position:fixed;bottom:0;left:0;right:0;z-index:8888;
+      background:#1A5276;color:#fff;
+      padding:14px 16px 14px;
+      box-shadow:0 -4px 20px rgba(0,0,0,0.3);
+      flex-direction:row;align-items:center;gap:12px;
+      padding-bottom:calc(14px + env(safe-area-inset-bottom));
+    }
+    #install-banner.show{display:flex;}
+    #install-banner img{width:44px;height:44px;border-radius:10px;}
+    #install-banner .info{flex:1;}
+    #install-banner .info strong{display:block;font-size:14px;}
+    #install-banner .info small{font-size:11px;color:#7FB3D3;}
+    #install-banner button.btn-install{
+      background:#1ABC9C;border:none;border-radius:20px;
+      color:#fff;font-weight:700;font-size:13px;
+      padding:8px 16px;cursor:pointer;white-space:nowrap;
+    }
+    #install-banner button.btn-close{
+      background:none;border:none;color:#7FB3D3;
+      font-size:20px;cursor:pointer;padding:4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SPLASH -->
+  <div id="splash">
+    <img src="icon-180.png" alt="EstomaCare"/>
+    <div class="titulo">Estoma<span>Care</span></div>
+    <div class="sub">Curativos &amp; Estomaterapia<br/>CHPBG — Guarulhos</div>
+    <div class="loader">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="versao">v3.0 · 2025</div>
+  </div>
+
+  <!-- BANNER INSTALAR (aparece automaticamente no Android) -->
+  <div id="install-banner">
+    <img src="icon-192.png" alt="EstomaCare"/>
+    <div class="info">
+      <strong>Instalar EstomaCare</strong>
+      <small>Adicionar à tela inicial como app</small>
+    </div>
+    <button class="btn-install" id="btn-install">Instalar</button>
+    <button class="btn-close" id="btn-close">×</button>
+  </div>
+
+  <div id="root"></div>
+
+  <script>(function(){
+  const w = console.warn.bind(console);
+  console.warn = function(...a){
+    if(a[0]&&typeof a[0]==='string'&&a[0].includes('Babel'))return;
+    w(...a);
+  };
+})();</script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+  <script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect, useCallback } = React;
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PERSISTÊNCIA — IndexedDB (dados salvos no celular permanentemente)
+// ═══════════════════════════════════════════════════════════════════════════════
+const DB_NAME = "EstomaCareDB";
+const DB_VERSION = 1;
+const STORE = "atendimentos";
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        const store = db.createObjectStore(STORE, { keyPath: "id" });
+        store.createIndex("prontuario", "prontuario", { unique: false });
+        store.createIndex("dataAtendimento", "dataAtendimento", { unique: false });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbSalvar(registro) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(registro);
+    tx.oncomplete = () => resolve(registro);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGetAll() {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result.sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbDeletar(id) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbExportar() {
+  const todos = await dbGetAll();
+  // Remove fotos base64 do JSON para não explodir o tamanho
+  const limpo = todos.map(a => ({ ...a, fotos: (a.fotos || []).map(f => ({ ...f, src: "[imagem]" })) }));
+  return JSON.stringify({ versao: "EstomaCare-v3", exportado: new Date().toISOString(), total: todos.length, atendimentos: limpo }, null, 2);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PALETA & CONSTANTES
+// ═══════════════════════════════════════════════════════════════════════════════
+const C = {
+  bg: "#F0F4F8", surface: "#FFFFFF", primary: "#1A5276", primaryLight: "#2E86C1",
+  accent: "#1ABC9C", accentWarm: "#E67E22", danger: "#C0392B", text: "#1C2833",
+  muted: "#7F8C8D", border: "#D5D8DC", headerBg: "#1A5276",
+  cardShadow: "0 2px 8px rgba(26,82,118,0.10)", warning: "#F39C12",
+};
+
+const ORIGENS = ["UTI", "Clínica Médica", "Clínica Cirúrgica", "Ambulatório", "UB (Unidade Básica)", "Emergência", "Domiciliar"];
+const TIPOS_FERIDA = ["Úlcera por Pressão", "Úlcera Venosa", "Úlcera Arterial", "Pé Diabético", "Ferida Cirúrgica", "Deiscência", "Fístula", "Lesão por Umidade", "Queimadura", "Trauma/Laceração", "Oncológica", "Estoma", "Outra"];
+const COBERTURAS = ["AGE", "Alginato de Cálcio", "Carvão Ativado", "Colagenase", "Espuma de Poliuretano", "Filme Transparente", "Gaze Parafinada", "Hidrogel", "Hidrocoloide", "Mel de Manuka", "NPWT (VAC)", "Prata Nanocristalina", "SF 0,9%", "PHMB", "Ácidos Graxos Essenciais", "Outra"];
+const FASES = ["Hemostasia", "Inflamatória", "Proliferativa", "Remodelação"];
+const COMPLICACOES = ["Infecção", "Deiscência", "Necrose", "Sangramento", "Alergia à cobertura", "Sem complicações"];
+
+// ── ESCALA DE BRADEN ──────────────────────────────────────────────────────────
+const BRADEN = [
+  { id: "percepcao", label: "Percepção Sensorial", desc: "Capacidade de responder a desconforto por pressão",
+    options: [{ v: 1, l: "Completamente limitada" }, { v: 2, l: "Muito limitada" }, { v: 3, l: "Levemente limitada" }, { v: 4, l: "Sem limitação" }] },
+  { id: "umidade", label: "Umidade", desc: "Grau de exposição da pele à umidade",
+    options: [{ v: 1, l: "Constantemente úmida" }, { v: 2, l: "Muito úmida" }, { v: 3, l: "Ocasionalmente úmida" }, { v: 4, l: "Raramente úmida" }] },
+  { id: "atividade", label: "Atividade", desc: "Grau de atividade física",
+    options: [{ v: 1, l: "Acamado" }, { v: 2, l: "Restrito à cadeira" }, { v: 3, l: "Caminha ocasionalmente" }, { v: 4, l: "Caminha frequentemente" }] },
+  { id: "mobilidade", label: "Mobilidade", desc: "Capacidade de mudar e controlar posição corporal",
+    options: [{ v: 1, l: "Completamente imóvel" }, { v: 2, l: "Muito limitada" }, { v: 3, l: "Levemente limitada" }, { v: 4, l: "Sem limitação" }] },
+  { id: "nutricao", label: "Nutrição", desc: "Padrão usual de ingestão alimentar",
+    options: [{ v: 1, l: "Muito pobre" }, { v: 2, l: "Provavelmente inadequada" }, { v: 3, l: "Adequada" }, { v: 4, l: "Excelente" }] },
+  { id: "friccao", label: "Fricção e Cisalhamento", desc: "Atrito durante movimentação do paciente",
+    options: [{ v: 1, l: "Problema" }, { v: 2, l: "Problema em potencial" }, { v: 3, l: "Sem problema aparente" }] },
+];
+const bradenRisco = s => {
+  if (s <= 9) return { label: "Risco Muito Alto", color: C.danger };
+  if (s <= 12) return { label: "Risco Alto", color: "#E74C3C" };
+  if (s <= 14) return { label: "Risco Moderado", color: C.accentWarm };
+  if (s <= 18) return { label: "Risco Baixo", color: C.warning };
+  return { label: "Sem Risco Significativo", color: C.accent };
+};
+
+// ── ESCALA DE WAGNER ──────────────────────────────────────────────────────────
+const WAGNER = [
+  { grau: 0, label: "Grau 0", desc: "Pé em risco — sem lesão aberta. Calosidades, deformidades, pele íntegra.", color: "#27AE60" },
+  { grau: 1, label: "Grau 1", desc: "Úlcera superficial — compromete pele e tecido subcutâneo, sem atingir tendão, cápsula ou osso.", color: C.accent },
+  { grau: 2, label: "Grau 2", desc: "Úlcera profunda — atinge tendão, cápsula articular ou osso, sem osteomielite.", color: C.warning },
+  { grau: 3, label: "Grau 3", desc: "Úlcera profunda com abscesso, osteomielite ou artrite séptica.", color: C.accentWarm },
+  { grau: 4, label: "Grau 4", desc: "Gangrena localizada — antepé ou calcanhar.", color: C.danger },
+  { grau: 5, label: "Grau 5", desc: "Gangrena extensa — todo o pé comprometido.", color: "#6C3483" },
+];
+
+// ── NPUAP / EPUAP 2019 ────────────────────────────────────────────────────────
+const NPUAP = [
+  { estagio: "Estágio 1", label: "Eritema não branqueável",
+    desc: "Pele íntegra com eritema não branqueável localizado. Pode haver alteração de temperatura, consistência ou sensação.", cor: "#F7DC6F", textColor: "#7D6608" },
+  { estagio: "Estágio 2", label: "Perda parcial da espessura da pele",
+    desc: "Perda parcial da espessura cutânea com exposição da derme. Leito viável, rosado ou avermelhado. Pode ser flictena íntegra ou rompida.", cor: C.accentWarm, textColor: "#fff" },
+  { estagio: "Estágio 3", label: "Perda total da espessura da pele",
+    desc: "Perda total da espessura cutânea com visibilidade do tecido adiposo. Pode apresentar esfacelo e/ou tecido necrótico. Sem exposição óssea, tendinosa ou muscular.", cor: C.danger, textColor: "#fff" },
+  { estagio: "Estágio 4", label: "Perda total da espessura dos tecidos",
+    desc: "Perda total da espessura cutânea com exposição de fáscia, músculo, tendão, ligamento, cartilagem ou osso.", cor: "#6C3483", textColor: "#fff" },
+  { estagio: "Não Classificável", label: "Profundidade indeterminada",
+    desc: "Perda total com extensão desconhecida, encoberta por esfacelo e/ou tecido necrótico.", cor: "#566573", textColor: "#fff" },
+  { estagio: "Suspeita de LPP Profunda", label: "Lesão Tissular Profunda",
+    desc: "Área de coloração vermelho escuro, púrpura ou castanho, ou bolha com exsudato hemorrágico sobre tecido danificado por pressão.", cor: "#4A235A", textColor: "#fff" },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+const fmtDate = d => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : "—";
+const calcArea = (c, l) => c && l ? (parseFloat(c) * parseFloat(l)).toFixed(1) : null;
+const diasTrat = (ini, fim) => {
+  if (!ini) return null;
+  const d = Math.round((new Date((fim || new Date().toISOString().split("T")[0]) + "T12:00:00") - new Date(ini + "T12:00:00")) / 86400000);
+  return d >= 0 ? d : null;
+};
+const corDor = d => d <= 3 ? "#27AE60" : d <= 6 ? C.accentWarm : C.danger;
+const mesAno = d => { const x = new Date(d + "T12:00:00"); return `${String(x.getMonth() + 1).padStart(2, "0")}/${x.getFullYear()}`; };
+const hoje = () => new Date().toISOString().split("T")[0];
+
+function alertasVencidos(atendimentos, diasLimite = 7) {
+  const por = {};
+  atendimentos.forEach(a => { if (!por[a.prontuario] || a.dataAtendimento > por[a.prontuario].dataAtendimento) por[a.prontuario] = a; });
+  const hj = new Date();
+  return Object.values(por).filter(a => {
+    if (a.dataTermino) return false;
+    return Math.round((hj - new Date(a.dataAtendimento + "T12:00:00")) / 86400000) >= diasLimite;
+  });
+}
+
+function gerarRelatorio(atendimentos, mes) {
+  const f = mes ? atendimentos.filter(a => mesAno(a.dataAtendimento) === mes) : atendimentos;
+  const origens = {}, tipos = {}, coberturas = {}, comps = {}, wagner = {}, npuap = {};
+  f.forEach(a => {
+    if (a.origem) origens[a.origem] = (origens[a.origem] || 0) + 1;
+    if (a.tipoFerida) tipos[a.tipoFerida] = (tipos[a.tipoFerida] || 0) + 1;
+    (a.coberturas || []).forEach(c => { coberturas[c] = (coberturas[c] || 0) + 1; });
+    (a.complicacoes || []).forEach(c => { comps[c] = (comps[c] || 0) + 1; });
+    if (a.wagnerGrau != null && a.wagnerGrau !== "") { const k = `Grau ${a.wagnerGrau}`; wagner[k] = (wagner[k] || 0) + 1; }
+    if (a.npuapEstagio) npuap[a.npuapEstagio] = (npuap[a.npuapEstagio] || 0) + 1;
+  });
+  const total = f.length, unicos = new Set(f.map(a => a.prontuario)).size;
+  const infeccoes = f.filter(a => (a.complicacoes || []).includes("Infecção")).length;
+  return { total, unicos, origens, tipos, coberturas, comps, wagner, npuap, infeccoes, taxa: total ? (infeccoes / total * 100).toFixed(1) : 0, lista: f };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENTES BASE
+// ═══════════════════════════════════════════════════════════════════════════════
+const Card = ({ children, style = {} }) => (
+  <div style={{ background: C.surface, borderRadius: 14, boxShadow: C.cardShadow, padding: "16px", marginBottom: 14, ...style }}>{children}</div>
+);
+const Badge = ({ label, color = C.primary, small }) => (
+  <span style={{ background: color + "22", color, border: `1px solid ${color}44`, borderRadius: 20, padding: small ? "1px 8px" : "3px 10px", fontSize: small ? 11 : 12, fontWeight: 600, whiteSpace: "nowrap" }}>{label}</span>
+);
+const Field = ({ label, children, required }) => (
+  <div style={{ marginBottom: 13 }}>
+    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: .8, marginBottom: 4 }}>
+      {label}{required && <span style={{ color: C.danger }}> *</span>}
+    </label>
+    {children}
+  </div>
+);
+const inp = { width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", fontSize: 15, color: C.text, background: "#FAFBFC", outline: "none", boxSizing: "border-box" };
+const Input = ({ value, onChange, type = "text", placeholder = "" }) => (
+  <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inp} />
+);
+const Select = ({ value, onChange, options, placeholder = "Selecione..." }) => (
+  <select value={value} onChange={e => onChange(e.target.value)} style={{ ...inp, color: value ? C.text : C.muted }}>
+    <option value="">{placeholder}</option>
+    {options.map(o => <option key={o} value={o}>{o}</option>)}
+  </select>
+);
+const Textarea = ({ value, onChange, placeholder, rows = 3 }) => (
+  <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows} placeholder={placeholder} style={{ ...inp, resize: "vertical" }} />
+);
+function MultiCheck({ options, selected, onChange }) {
+  const toggle = v => onChange(selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v]);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {options.map(o => (
+        <button key={o} onClick={() => toggle(o)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${selected.includes(o) ? C.primary : C.border}`, background: selected.includes(o) ? C.primary : "#FAFBFC", color: selected.includes(o) ? "#fff" : C.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{o}</button>
+      ))}
+    </div>
+  );
+}
+const SecTitle = ({ icon, title }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: `2px solid ${C.primary}22` }}>
+    <span style={{ fontSize: 18 }}>{icon}</span>
+    <span style={{ fontWeight: 700, color: C.primary, fontSize: 15 }}>{title}</span>
+  </div>
+);
+function BarChart({ label, value, max, color = C.primary }) {
+  const pct = max ? Math.round(value / max * 100) : 0;
+  return (
+    <div style={{ marginBottom: 9 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+        <span style={{ fontWeight: 600, color: C.text }}>{label}</span>
+        <span style={{ color: C.muted }}>{value} ({pct}%)</span>
+      </div>
+      <div style={{ background: C.border, borderRadius: 6, height: 9 }}>
+        <div style={{ width: `${pct}%`, background: color, borderRadius: 6, height: 9, transition: "width .4s" }} />
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ESCALAS CLÍNICAS
+// ═══════════════════════════════════════════════════════════════════════════════
+function EscalaBraden({ value, onChange }) {
+  const score = BRADEN.reduce((s, b) => s + (value[b.id] || 0), 0);
+  const completo = BRADEN.every(b => value[b.id]);
+  const risco = completo ? bradenRisco(score) : null;
+  return (
+    <div>
+      <div style={{ background: "#EAF4FB", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: C.muted, marginBottom: 12, lineHeight: 1.5 }}>
+        ℹ️ Avalia risco de Lesão por Pressão. Score máximo: 23 pts. Quanto menor o score, maior o risco.
+      </div>
+      {risco && (
+        <div style={{ background: risco.color + "22", border: `2px solid ${risco.color}`, borderRadius: 10, padding: "12px", textAlign: "center", marginBottom: 14 }}>
+          <span style={{ fontSize: 26, fontWeight: 800, color: risco.color }}>{score} pts</span>
+          <span style={{ fontWeight: 700, color: risco.color, fontSize: 14, marginLeft: 10 }}>{risco.label}</span>
+        </div>
+      )}
+      {BRADEN.map(b => (
+        <div key={b.id} style={{ marginBottom: 12, padding: "12px", background: C.bg, borderRadius: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.primary, marginBottom: 2 }}>{b.label}</div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{b.desc}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {b.options.map(o => (
+              <label key={o.v} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 8px", borderRadius: 8, background: value[b.id] === o.v ? C.primary + "15" : "transparent", border: `1px solid ${value[b.id] === o.v ? C.primary : "transparent"}` }}>
+                <input type="radio" checked={value[b.id] === o.v} onChange={() => onChange({ ...value, [b.id]: o.v })} style={{ accentColor: C.primary, width: 16, height: 16 }} />
+                <span style={{ fontSize: 13 }}><strong style={{ color: C.primary }}>{o.v}</strong> — {o.l}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EscalaWagner({ value, onChange }) {
+  return (
+    <div>
+      <div style={{ background: "#EAF4FB", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: C.muted, marginBottom: 12 }}>
+        ℹ️ Classificação de Wagner para úlceras do pé diabético — Grau 0 (risco) a Grau 5 (gangrena extensa).
+      </div>
+      {WAGNER.map(w => (
+        <button key={w.grau} onClick={() => onChange(w.grau === value ? null : w.grau)}
+          style={{ width: "100%", textAlign: "left", padding: "12px 14px", marginBottom: 8, borderRadius: 10, border: `2px solid ${value === w.grau ? w.color : C.border}`, background: value === w.grau ? w.color + "18" : "#FAFBFC", cursor: "pointer" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ background: w.color, color: "#fff", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{w.grau}</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: value === w.grau ? w.color : C.text }}>{w.label}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2, lineHeight: 1.4 }}>{w.desc}</div>
+            </div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function EscalaNPUAP({ value, onChange }) {
+  return (
+    <div>
+      <div style={{ background: "#EAF4FB", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: C.muted, marginBottom: 12 }}>
+        ℹ️ Classificação NPUAP/EPUAP 2019 — Lesões por Pressão. Selecione o estágio correspondente.
+      </div>
+      {NPUAP.map(n => (
+        <button key={n.estagio} onClick={() => onChange(n.estagio === value ? "" : n.estagio)}
+          style={{ width: "100%", textAlign: "left", padding: "12px 14px", marginBottom: 8, borderRadius: 10, border: `2px solid ${value === n.estagio ? n.cor : C.border}`, background: value === n.estagio ? n.cor + "18" : "#FAFBFC", cursor: "pointer" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <div style={{ background: n.cor, borderRadius: 8, padding: "4px 8px", flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: n.textColor, whiteSpace: "nowrap" }}>{n.estagio}</span>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: value === n.estagio ? n.cor : C.text }}>{n.label}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2, lineHeight: 1.4 }}>{n.desc}</div>
+            </div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FOTOS
+// ═══════════════════════════════════════════════════════════════════════════════
+function CapturaFoto({ fotos, onChange }) {
+  const inputRef = useRef();
+  function handleFile(e) {
+    Array.from(e.target.files).forEach(file => {
+      const r = new FileReader();
+      r.onload = ev => onChange(prev => [...prev, { src: ev.target.result, data: hoje(), legenda: "", id: Date.now().toString() + Math.random() }]);
+      r.readAsDataURL(file);
+    });
+    e.target.value = "";
+  }
+  return (
+    <div>
+      <button onClick={() => inputRef.current.click()}
+        style={{ width: "100%", padding: "14px", border: `2px dashed ${C.primaryLight}`, borderRadius: 10, background: C.primaryLight + "11", color: C.primaryLight, fontWeight: 700, cursor: "pointer", fontSize: 15, marginBottom: 12 }}>
+        📷 Adicionar Foto da Ferida
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" multiple capture="environment" onChange={handleFile} style={{ display: "none" }} />
+      {fotos.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {fotos.map(f => (
+            <div key={f.id} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.border}`, position: "relative" }}>
+              <img src={f.src} alt="ferida" style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }} />
+              <div style={{ padding: "6px 8px", background: C.surface }}>
+                <div style={{ fontSize: 10, color: C.muted }}>{fmtDate(f.data)}</div>
+                <input value={f.legenda} onChange={e => onChange(prev => prev.map(x => x.id === f.id ? { ...x, legenda: e.target.value } : x))}
+                  placeholder="Legenda..." style={{ width: "100%", border: `1px solid ${C.border}`, borderRadius: 6, padding: "4px 6px", fontSize: 12, boxSizing: "border-box" }} />
+              </div>
+              <button onClick={() => onChange(prev => prev.filter(x => x.id !== f.id))}
+                style={{ position: "absolute", top: 5, right: 5, background: C.danger, border: "none", borderRadius: "50%", width: 24, height: 24, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14, lineHeight: "24px", textAlign: "center" }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ComparativoFotos({ atendimentos }) {
+  const todas = atendimentos.flatMap(a => (a.fotos || []).map(f => ({ ...f, dataAtend: a.dataAtendimento }))).sort((a, b) => a.data.localeCompare(b.data));
+  if (!todas.length) return <div style={{ color: C.muted, fontSize: 13, padding: 12 }}>Nenhuma foto registrada ainda.</div>;
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>📈 {todas.length} foto(s) — evolução temporal da ferida</div>
+      <div style={{ display: "flex", overflowX: "auto", gap: 10, paddingBottom: 8 }}>
+        {todas.map((f, i) => (
+          <div key={f.id} style={{ minWidth: 140, border: `2px solid ${i === 0 ? C.muted : i === todas.length - 1 ? C.accent : C.border}`, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+            <img src={f.src} alt="evolução" style={{ width: 140, height: 110, objectFit: "cover", display: "block" }} />
+            <div style={{ padding: "6px 8px", background: C.surface }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: i === todas.length - 1 ? C.accent : C.muted }}>{i === 0 ? "📌 Inicial" : i === todas.length - 1 ? "✅ Atual" : `Foto ${i + 1}`}</div>
+              <div style={{ fontSize: 11 }}>{fmtDate(f.data)}</div>
+              {f.legenda && <div style={{ fontSize: 10, color: C.muted }}>{f.legenda}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORMULÁRIO — 6 ETAPAS
+// ═══════════════════════════════════════════════════════════════════════════════
+const initForm = () => ({
+  nome: "", prontuario: "", leito: "", origem: "", dataNascimento: "",
+  tipoFerida: "", localizacao: "", dataInicio: "", dataTermino: "",
+  fasecicatrizacao: "", comprimento: "", largura: "", profundidade: "",
+  aspecto: "", exsudato: "", odor: "Ausente", dor: 0, bordas: "",
+  coberturas: [], tecnica: "", frequencia: "", complicacoes: [], observacoes: "",
+  dataAtendimento: hoje(), fotos: [], braden: {}, wagnerGrau: null, npuapEstagio: "",
+});
+
+function FormAtendimento({ onSalvar, onCancelar }) {
+  const [form, setForm] = useState(initForm());
+  const [step, setStep] = useState(0);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const mostrarWagner = form.tipoFerida === "Pé Diabético";
+  const mostrarNPUAP = form.tipoFerida === "Úlcera por Pressão";
+  const bradenScore = BRADEN.reduce((s, b) => s + (form.braden[b.id] || 0), 0);
+
+  const steps = [
+    { label: "Paciente", icon: "👤" }, { label: "Ferida", icon: "🩹" },
+    { label: "Avaliação", icon: "🔍" }, { label: "Escalas", icon: "📊" },
+    { label: "Fotos", icon: "📷" }, { label: "Conduta", icon: "💊" },
+  ];
+
+  function validar() {
+    if (!form.nome || !form.prontuario || !form.origem || !form.tipoFerida) {
+      setErro("Preencha os campos obrigatórios: Nome, Prontuário, Origem e Tipo de Ferida.");
+      return false;
+    }
+    setErro(""); return true;
+  }
+
+  async function handleSalvar() {
+    if (!validar()) return;
+    setSalvando(true);
+    try {
+      const reg = { ...form, id: Date.now().toString(), criadoEm: new Date().toISOString() };
+      await dbSalvar(reg);
+      onSalvar(reg);
+    } catch (e) {
+      setErro("Erro ao salvar. Tente novamente.");
+    }
+    setSalvando(false);
+  }
+
+  return (
+    <div style={{ maxWidth: 560, margin: "0 auto" }}>
+      {/* Stepper */}
+      <div style={{ display: "flex", background: C.surface, borderRadius: 12, overflow: "hidden", boxShadow: C.cardShadow, marginBottom: 16 }}>
+        {steps.map((s, i) => (
+          <button key={i} onClick={() => setStep(i)} style={{ flex: 1, padding: "9px 2px", border: "none", background: step === i ? C.primary : "transparent", color: step === i ? "#fff" : C.muted, fontWeight: 700, fontSize: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, borderBottom: step === i ? `3px solid ${C.accent}` : "3px solid transparent" }}>
+            <span style={{ fontSize: 15 }}>{s.icon}</span>{s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* STEP 0 — Identificação */}
+      {step === 0 && (
+        <Card>
+          <SecTitle icon="👤" title="Identificação do Paciente" />
+          <Field label="Data do Atendimento" required><Input type="date" value={form.dataAtendimento} onChange={v => set("dataAtendimento", v)} /></Field>
+          <Field label="Nome Completo" required><Input value={form.nome} onChange={v => set("nome", v)} placeholder="Nome completo do paciente" /></Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Field label="Prontuário" required><Input value={form.prontuario} onChange={v => set("prontuario", v)} placeholder="Nº" /></Field>
+            <Field label="Leito / Setor"><Input value={form.leito} onChange={v => set("leito", v)} placeholder="Ex: UTI-12" /></Field>
+          </div>
+          <Field label="Data de Nascimento"><Input type="date" value={form.dataNascimento} onChange={v => set("dataNascimento", v)} /></Field>
+          <Field label="Origem / Procedência" required><Select value={form.origem} onChange={v => set("origem", v)} options={ORIGENS} /></Field>
+        </Card>
+      )}
+
+      {/* STEP 1 — Ferida */}
+      {step === 1 && (
+        <Card>
+          <SecTitle icon="🩹" title="Caracterização da Ferida" />
+          <Field label="Tipo de Ferida" required><Select value={form.tipoFerida} onChange={v => set("tipoFerida", v)} options={TIPOS_FERIDA} /></Field>
+          <Field label="Localização Anatômica"><Input value={form.localizacao} onChange={v => set("localizacao", v)} placeholder="Ex: Maléolo lateral direito, região sacral..." /></Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Field label="Início do Tratamento"><Input type="date" value={form.dataInicio} onChange={v => set("dataInicio", v)} /></Field>
+            <Field label="Término / Alta"><Input type="date" value={form.dataTermino} onChange={v => set("dataTermino", v)} /></Field>
+          </div>
+          <Field label="Fase de Cicatrização"><Select value={form.fasecicatrizacao} onChange={v => set("fasecicatrizacao", v)} options={FASES} /></Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <Field label="Comprimento (cm)"><Input type="number" value={form.comprimento} onChange={v => set("comprimento", v)} placeholder="cm" /></Field>
+            <Field label="Largura (cm)"><Input type="number" value={form.largura} onChange={v => set("largura", v)} placeholder="cm" /></Field>
+            <Field label="Prof. (cm)"><Input type="number" value={form.profundidade} onChange={v => set("profundidade", v)} placeholder="cm" /></Field>
+          </div>
+          {calcArea(form.comprimento, form.largura) && (
+            <div style={{ background: C.accent + "15", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: C.primary, fontWeight: 600 }}>
+              📐 Área estimada: <strong>{calcArea(form.comprimento, form.largura)} cm²</strong>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* STEP 2 — Avaliação */}
+      {step === 2 && (
+        <Card>
+          <SecTitle icon="🔍" title="Avaliação Clínica" />
+          <Field label="Aspecto do Leito da Ferida"><Textarea value={form.aspecto} onChange={v => set("aspecto", v)} placeholder="Ex: Granulação viçosa, esfacelo amarelado, tecido necrótico seco, misto..." /></Field>
+          <Field label="Bordas"><Input value={form.bordas} onChange={v => set("bordas", v)} placeholder="Regulares, maceradas, endurecidas, epitelizando..." /></Field>
+          <Field label="Exsudato"><Input value={form.exsudato} onChange={v => set("exsudato", v)} placeholder="Ex: Seroso escasso, serossanguinolento moderado, purulento..." /></Field>
+          <Field label="Odor"><Select value={form.odor} onChange={v => set("odor", v)} options={["Ausente", "Discreto", "Moderado", "Forte", "Fétido"]} /></Field>
+          <Field label={`Dor — Escala Visual Analógica (EVA): ${form.dor}/10`}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input type="range" min={0} max={10} value={form.dor} onChange={e => set("dor", parseInt(e.target.value))} style={{ flex: 1, accentColor: corDor(form.dor), height: 6 }} />
+              <div style={{ minWidth: 44, height: 44, borderRadius: "50%", background: corDor(form.dor), display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#fff", fontSize: 16 }}>{form.dor}</div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.muted, marginTop: 4 }}>
+              <span>0 — Sem dor</span><span>5 — Moderada</span><span>10 — Máxima</span>
+            </div>
+          </Field>
+          <Field label="Complicações"><MultiCheck options={COMPLICACOES} selected={form.complicacoes} onChange={v => set("complicacoes", v)} /></Field>
+        </Card>
+      )}
+
+      {/* STEP 3 — Escalas Clínicas */}
+      {step === 3 && (
+        <div>
+          <Card>
+            <SecTitle icon="📊" title="Escala de Braden" />
+            {BRADEN.every(b => form.braden[b.id]) && (
+              <div style={{ background: bradenRisco(bradenScore).color + "22", border: `2px solid ${bradenRisco(bradenScore).color}`, borderRadius: 10, padding: "10px 14px", textAlign: "center", marginBottom: 14 }}>
+                <span style={{ fontSize: 24, fontWeight: 800, color: bradenRisco(bradenScore).color }}>{bradenScore} pts</span>
+                <span style={{ fontWeight: 700, color: bradenRisco(bradenScore).color, fontSize: 14, marginLeft: 10 }}>{bradenRisco(bradenScore).label}</span>
+              </div>
+            )}
+            <EscalaBraden value={form.braden} onChange={v => set("braden", v)} />
+          </Card>
+
+          {mostrarWagner && (
+            <Card>
+              <SecTitle icon="🦶" title="Classificação de Wagner — Pé Diabético" />
+              <EscalaWagner value={form.wagnerGrau} onChange={v => set("wagnerGrau", v)} />
+            </Card>
+          )}
+
+          {mostrarNPUAP && (
+            <Card>
+              <SecTitle icon="🏥" title="Classificação NPUAP/EPUAP — Lesão por Pressão" />
+              <EscalaNPUAP value={form.npuapEstagio} onChange={v => set("npuapEstagio", v)} />
+            </Card>
+          )}
+
+          {!mostrarWagner && !mostrarNPUAP && (
+            <Card>
+              <div style={{ textAlign: "center", color: C.muted, padding: "12px 0", fontSize: 13 }}>
+                <div style={{ fontSize: 30, marginBottom: 8 }}>💡</div>
+                Selecione <strong>Pé Diabético</strong> para ativar a Escala de Wagner<br />
+                ou <strong>Úlcera por Pressão</strong> para a classificação NPUAP/EPUAP.
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* STEP 4 — Fotos */}
+      {step === 4 && (
+        <Card>
+          <SecTitle icon="📷" title="Registro Fotográfico" />
+          <div style={{ background: "#EAF4FB", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: C.muted, marginBottom: 12 }}>
+            ℹ️ As fotos são armazenadas localmente no seu dispositivo. Para abrir a câmera, toque no botão abaixo.
+          </div>
+          <CapturaFoto fotos={form.fotos} onChange={fn => setForm(f => ({ ...f, fotos: typeof fn === "function" ? fn(f.fotos) : fn }))} />
+        </Card>
+      )}
+
+      {/* STEP 5 — Conduta */}
+      {step === 5 && (
+        <Card>
+          <SecTitle icon="💊" title="Conduta e Tratamento" />
+          <Field label="Coberturas Utilizadas"><MultiCheck options={COBERTURAS} selected={form.coberturas} onChange={v => set("coberturas", v)} /></Field>
+          <Field label="Técnica de Curativo"><Textarea value={form.tecnica} onChange={v => set("tecnica", v)} placeholder="Descreva: irrigação, desbridamento, aplicação da cobertura, técnica asséptica..." /></Field>
+          <Field label="Frequência de Troca"><Input value={form.frequencia} onChange={v => set("frequencia", v)} placeholder="Ex: A cada 48h, diário, 2× semana, conforme saturação..." /></Field>
+          <Field label="Observações / Evolução Clínica"><Textarea value={form.observacoes} onChange={v => set("observacoes", v)} rows={4} placeholder="Resposta ao tratamento, orientações ao paciente e família, encaminhamentos, intercorrências..." /></Field>
+          {erro && <div style={{ background: "#FDEDEC", border: `1px solid ${C.danger}`, borderRadius: 8, padding: "10px 14px", color: C.danger, fontSize: 13, marginBottom: 12 }}>{erro}</div>}
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button onClick={onCancelar} style={{ flex: 1, padding: "13px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: "transparent", color: C.muted, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Cancelar</button>
+            <button onClick={handleSalvar} disabled={salvando}
+              style={{ flex: 2, padding: "13px", borderRadius: 10, border: "none", background: salvando ? C.muted : C.primary, color: "#fff", fontWeight: 700, cursor: salvando ? "default" : "pointer", fontSize: 15, boxShadow: `0 3px 10px ${C.primary}55` }}>
+              {salvando ? "Salvando..." : "✅ Salvar Atendimento"}
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Navegação */}
+      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 4px 0" }}>
+        <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}
+          style={{ padding: "10px 20px", borderRadius: 8, border: `1.5px solid ${C.border}`, background: "transparent", color: step === 0 ? C.border : C.primary, fontWeight: 700, cursor: step === 0 ? "default" : "pointer", fontSize: 14 }}>← Anterior</button>
+        {step < 5 && (
+          <button onClick={() => setStep(s => s + 1)}
+            style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: C.primary, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Próximo →</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRONTUÁRIO INDIVIDUAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function ProntuarioPaciente({ prontuario, atendimentos, onVoltar, onDeletar }) {
+  const lista = atendimentos.filter(a => a.prontuario === prontuario);
+  const ultimo = lista[0];
+  if (!ultimo) return null;
+
+  const bradenScore = ultimo.braden ? BRADEN.reduce((s, b) => s + (ultimo.braden[b.id] || 0), 0) : 0;
+  const bradenOk = ultimo.braden && BRADEN.every(b => ultimo.braden[b.id]);
+  const risco = bradenOk && bradenScore >= 6 ? bradenRisco(bradenScore) : null;
+  const wagnerSel = ultimo.wagnerGrau != null ? WAGNER.find(w => w.grau === ultimo.wagnerGrau) : null;
+  const npuapSel = ultimo.npuapEstagio ? NPUAP.find(n => n.estagio === ultimo.npuapEstagio) : null;
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <button onClick={onVoltar} style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, cursor: "pointer", marginBottom: 12, fontSize: 14 }}>← Voltar à lista</button>
+
+      {/* Cabeçalho do paciente */}
+      <Card style={{ borderTop: `4px solid ${C.primary}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 18 }}>{ultimo.nome}</div>
+            <div style={{ color: C.muted, fontSize: 13 }}>Prontuário: <strong>{prontuario}</strong>{ultimo.leito ? ` · ${ultimo.leito}` : ""}</div>
+            {ultimo.dataNascimento && <div style={{ color: C.muted, fontSize: 13 }}>Nasc.: {fmtDate(ultimo.dataNascimento)}</div>}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
+            <Badge label={ultimo.origem} color={C.primaryLight} />
+            {risco && <Badge label={`Braden ${bradenScore}pts — ${risco.label}`} color={risco.color} />}
+            {wagnerSel && <Badge label={wagnerSel.label} color={wagnerSel.color} />}
+            {npuapSel && <Badge label={npuapSel.estagio} color={npuapSel.cor} />}
+          </div>
+        </div>
+      </Card>
+
+      {/* Comparativo de fotos */}
+      {lista.some(a => (a.fotos || []).length > 0) && (
+        <Card>
+          <SecTitle icon="📷" title="Evolução Fotográfica" />
+          <ComparativoFotos atendimentos={[...lista].reverse()} />
+        </Card>
+      )}
+
+      <div style={{ fontWeight: 700, color: C.primary, marginBottom: 8, fontSize: 14 }}>{lista.length} atendimento(s) registrado(s)</div>
+
+      {lista.map((a, i) => {
+        const ws = a.wagnerGrau != null ? WAGNER.find(w => w.grau === a.wagnerGrau) : null;
+        const ns = a.npuapEstagio ? NPUAP.find(n => n.estagio === a.npuapEstagio) : null;
+        const bs = a.braden ? BRADEN.reduce((s, b) => s + (a.braden[b.id] || 0), 0) : 0;
+        const bOk = a.braden && BRADEN.every(b => a.braden[b.id]);
+        return (
+          <Card key={a.id} style={{ borderLeft: `4px solid ${i === 0 ? C.accent : C.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+              <span style={{ fontWeight: 700, color: C.primary, fontSize: 15 }}>📅 {fmtDate(a.dataAtendimento)}</span>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
+                <Badge label={a.tipoFerida} color={C.primary} small />
+                {i === 0 && <Badge label="Último" color={C.accent} small />}
+                {confirmDel === a.id ? (
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={async () => { await dbDeletar(a.id); onDeletar(a.id); setConfirmDel(null); }}
+                      style={{ fontSize: 11, padding: "3px 8px", background: C.danger, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>Confirmar</button>
+                    <button onClick={() => setConfirmDel(null)}
+                      style={{ fontSize: 11, padding: "3px 8px", background: C.muted, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>Cancelar</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDel(a.id)}
+                    style={{ fontSize: 11, padding: "3px 8px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer" }}>🗑</button>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 13, marginBottom: 8 }}>
+              <div><span style={{ color: C.muted }}>Local:</span> {a.localizacao || "—"}</div>
+              <div><span style={{ color: C.muted }}>Dias em trat.:</span> <strong>{diasTrat(a.dataInicio, a.dataTermino) ?? "—"}</strong></div>
+              <div><span style={{ color: C.muted }}>Área:</span> {calcArea(a.comprimento, a.largura) || "—"} cm²</div>
+              <div><span style={{ color: C.muted }}>Dor EVA:</span> <strong style={{ color: corDor(a.dor) }}>{a.dor}/10</strong></div>
+              <div><span style={{ color: C.muted }}>Exsudato:</span> {a.exsudato || "—"}</div>
+              <div><span style={{ color: C.muted }}>Fase:</span> {a.fasecicatrizacao || "—"}</div>
+              <div><span style={{ color: C.muted }}>Odor:</span> {a.odor || "—"}</div>
+              <div><span style={{ color: C.muted }}>Bordas:</span> {a.bordas || "—"}</div>
+            </div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
+              {bOk && <Badge label={`Braden: ${bs}pts`} color={bradenRisco(bs)?.color || C.muted} small />}
+              {ws && <Badge label={ws.label} color={ws.color} small />}
+              {ns && <Badge label={ns.estagio} color={ns.cor} small />}
+            </div>
+            {(a.coberturas || []).length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Coberturas</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{a.coberturas.map(c => <Badge key={c} label={c} color={C.primaryLight} small />)}</div>
+              </div>
+            )}
+            {(a.complicacoes || []).length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Complicações</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{a.complicacoes.map(c => <Badge key={c} label={c} color={c === "Infecção" ? C.danger : C.accentWarm} small />)}</div>
+              </div>
+            )}
+            {a.tecnica && <div style={{ fontSize: 13, background: "#EAF4FB", borderRadius: 8, padding: "8px 10px", marginTop: 4 }}><strong>Técnica:</strong> {a.tecnica}</div>}
+            {a.aspecto && <div style={{ fontSize: 13, background: C.bg, borderRadius: 8, padding: "8px 10px", marginTop: 6 }}><strong>Leito:</strong> {a.aspecto}</div>}
+            {a.observacoes && <div style={{ fontSize: 13, background: "#F4F6F7", borderRadius: 8, padding: "8px 10px", marginTop: 6 }}><strong>Obs:</strong> {a.observacoes}</div>}
+            {a.frequencia && <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>🔄 Frequência: {a.frequencia}</div>}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ALERTAS
+// ═══════════════════════════════════════════════════════════════════════════════
+function PainelAlertas({ atendimentos, onVerPaciente }) {
+  const [dias, setDias] = useState(7);
+  const vencidos = alertasVencidos(atendimentos, dias);
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <Card style={{ borderTop: `4px solid ${C.danger}` }}>
+        <SecTitle icon="🚨" title="Alertas de Retorno" />
+        <Field label="Pacientes sem atendimento há quantos dias:">
+          <div style={{ display: "flex", gap: 8 }}>
+            {[3, 5, 7, 10, 14].map(d => (
+              <button key={d} onClick={() => setDias(d)}
+                style={{ flex: 1, padding: "9px 4px", borderRadius: 8, border: `1.5px solid ${dias === d ? C.danger : C.border}`, background: dias === d ? C.danger : "transparent", color: dias === d ? "#fff" : C.text, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+                {d}d
+              </button>
+            ))}
+          </div>
+        </Field>
+      </Card>
+      {vencidos.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 36 }}>
+          <div style={{ fontSize: 44, marginBottom: 8 }}>✅</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: C.accent }}>Nenhum paciente com retorno vencido!</div>
+          <div style={{ color: C.muted, fontSize: 13, marginTop: 6 }}>Todos atendidos nos últimos {dias} dias</div>
+        </div>
+      ) : (
+        <>
+          <div style={{ marginBottom: 12 }}><Badge label={`⚠️ ${vencidos.length} paciente(s) com retorno pendente`} color={C.danger} /></div>
+          {vencidos.map(a => {
+            const d = Math.round((new Date() - new Date(a.dataAtendimento + "T12:00:00")) / 86400000);
+            return (
+              <button key={a.prontuario} onClick={() => onVerPaciente(a.prontuario)}
+                style={{ width: "100%", textAlign: "left", background: C.surface, border: `2px solid ${C.danger}44`, borderRadius: 12, padding: "14px", marginBottom: 10, cursor: "pointer", boxShadow: C.cardShadow }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{a.nome}</div>
+                    <div style={{ color: C.muted, fontSize: 12 }}>Pront. {a.prontuario}{a.leito ? ` · ${a.leito}` : ""}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Último atendimento: {fmtDate(a.dataAtendimento)}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ background: d >= 14 ? C.danger : C.accentWarm, color: "#fff", borderRadius: 8, padding: "5px 10px", fontWeight: 800, fontSize: 20 }}>{d}d</div>
+                    <div style={{ fontSize: 10, color: C.danger, marginTop: 2 }}>sem retorno</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                  <Badge label={a.origem} color={C.primaryLight} small />
+                  <Badge label={a.tipoFerida} color={C.primary} small />
+                </div>
+              </button>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RELATÓRIO
+// ═══════════════════════════════════════════════════════════════════════════════
+function Relatorio({ atendimentos }) {
+  const meses = [...new Set(atendimentos.map(a => mesAno(a.dataAtendimento)))].sort().reverse();
+  const [mesSel, setMesSel] = useState(meses[0] || "");
+  const rel = gerarRelatorio(atendimentos, mesSel);
+
+  function exportarPDF() {
+    const linhas = rel.lista.map(a => {
+      const ws = a.wagnerGrau != null ? `Wagner G${a.wagnerGrau}` : "—";
+      const ns = a.npuapEstagio || "—";
+      const bs = a.braden && BRADEN.every(b => a.braden[b.id]) ? `${BRADEN.reduce((s, b) => s + (a.braden[b.id] || 0), 0)}pts` : "—";
+      return `<tr><td>${fmtDate(a.dataAtendimento)}</td><td>${a.nome}</td><td>${a.prontuario}</td><td>${a.origem || "—"}</td><td>${a.tipoFerida || "—"}</td><td>${a.localizacao || "—"}</td><td>${diasTrat(a.dataInicio, a.dataTermino) ?? "—"}d</td><td>${calcArea(a.comprimento, a.largura) || "—"}cm²</td><td>${(a.coberturas || []).join(", ") || "—"}</td><td>${(a.complicacoes || []).join(", ") || "—"}</td><td>${a.dor}/10</td><td>${bs}</td><td>${ws}</td><td>${ns}</td></tr>`;
+    }).join("");
+
+    const bar = (obj, max) => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<li>${k}: <strong>${v}</strong> (${max ? Math.round(v / max * 100) : 0}%)</li>`).join("") || "<li>Sem dados</li>";
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório EstomaCare</title>
+<style>
+body{font-family:Arial,sans-serif;margin:20px;color:#1C2833;font-size:11px;}
+h1{color:#1A5276;font-size:17px;}h2{color:#1A5276;font-size:13px;margin:16px 0 6px;border-bottom:2px solid #D5D8DC;padding-bottom:4px;}
+.kpis{display:flex;gap:12px;margin:14px 0;flex-wrap:wrap;}
+.kpi{background:#F0F4F8;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;}
+.kpi .val{font-size:22px;font-weight:800;color:#1A5276;}.kpi .lbl{font-size:9px;color:#7F8C8D;text-transform:uppercase;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+ul{margin:0;padding-left:16px;}li{margin-bottom:3px;}
+table{width:100%;border-collapse:collapse;font-size:9px;}th{background:#1A5276;color:#fff;padding:5px 3px;}
+td{padding:4px 3px;border-bottom:1px solid #D5D8DC;}tr:nth-child(even){background:#F8F9FA;}
+.footer{margin-top:24px;font-size:9px;color:#7F8C8D;text-align:center;border-top:1px solid #D5D8DC;padding-top:8px;}
+</style></head><body>
+<h1>🩺 EstomaCare — Relatório de Curativos e Estomaterapia</h1>
+<div style="color:#7F8C8D;font-size:10px;">Período: <strong>${mesSel || "Todos os registros"}</strong> · Gerado em: ${new Date().toLocaleString("pt-BR")}</div>
+<div class="kpis">
+<div class="kpi"><div class="val">${rel.total}</div><div class="lbl">Atendimentos</div></div>
+<div class="kpi"><div class="val">${rel.unicos}</div><div class="lbl">Pacientes Únicos</div></div>
+<div class="kpi"><div class="val" style="color:${parseFloat(rel.taxa) > 10 ? "#C0392B" : "#1ABC9C"}">${rel.taxa}%</div><div class="lbl">Taxa Infecção</div></div>
+<div class="kpi"><div class="val" style="color:#C0392B">${rel.infeccoes}</div><div class="lbl">Com Infecção</div></div>
+</div>
+<div class="grid3">
+<div><h2>Por Origem</h2><ul>${bar(rel.origens, rel.total)}</ul></div>
+<div><h2>Tipos de Ferida</h2><ul>${bar(rel.tipos, rel.total)}</ul></div>
+<div><h2>Coberturas</h2><ul>${bar(rel.coberturas, Math.max(1, ...Object.values(rel.coberturas).concat([0])))}</ul></div>
+</div>
+<div class="grid3">
+<div><h2>Complicações</h2><ul>${bar(rel.comps, rel.total)}</ul></div>
+<div><h2>Wagner (Pé Diabético)</h2><ul>${bar(rel.wagner, rel.total)}</ul></div>
+<div><h2>NPUAP/EPUAP (LPP)</h2><ul>${bar(rel.npuap, rel.total)}</ul></div>
+</div>
+<h2>Listagem Completa</h2>
+<table><tr><th>Data</th><th>Paciente</th><th>Pront.</th><th>Origem</th><th>Tipo</th><th>Local</th><th>Dur.</th><th>Área</th><th>Coberturas</th><th>Complic.</th><th>Dor</th><th>Braden</th><th>Wagner</th><th>NPUAP</th></tr>${linhas || "<tr><td colspan='14'>Nenhum atendimento</td></tr>"}</table>
+<div class="footer">EstomaCare v3 Final · Complexo Hospitalar Padre Bento de Guarulhos · Enfermagem — Estomaterapia<br>Documento gerado automaticamente para controle interno. Não substitui o prontuário hospitalar oficial.</div>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 600); }
+  }
+
+  async function exportarJSON() {
+    try {
+      const json = await dbExportar();
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `estomacare-backup-${hoje()}.json`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { alert("Erro ao exportar backup."); }
+  }
+
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <Card style={{ borderTop: `4px solid ${C.accent}` }}>
+        <SecTitle icon="📊" title="Relatório Mensal" />
+        <Field label="Período">
+          <Select value={mesSel} onChange={setMesSel} options={meses} placeholder="Todos os registros" />
+        </Field>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={exportarPDF} style={{ flex: 2, padding: "11px", borderRadius: 10, border: "none", background: C.primary, color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
+            🖨️ Exportar PDF
+          </button>
+          <button onClick={exportarJSON} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.accent}`, background: "transparent", color: C.accent, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>
+            💾 Backup
+          </button>
+        </div>
+      </Card>
+
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+        {[
+          { label: "Total Atendimentos", value: rel.total, color: C.primary, icon: "📋" },
+          { label: "Pacientes Únicos", value: rel.unicos, color: C.primaryLight, icon: "👥" },
+          { label: "Taxa de Infecção", value: `${rel.taxa}%`, color: parseFloat(rel.taxa) > 10 ? C.danger : C.accent, icon: "🦠" },
+          { label: "Com Infecção", value: rel.infeccoes, color: C.danger, icon: "⚠️" },
+        ].map(k => (
+          <div key={k.label} style={{ background: C.surface, borderRadius: 12, padding: "14px 10px", boxShadow: C.cardShadow, borderTop: `3px solid ${k.color}`, textAlign: "center" }}>
+            <div style={{ fontSize: 20, marginBottom: 2 }}>{k.icon}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: k.color }}>{k.value}</div>
+            <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <Card><SecTitle icon="🏥" title="Por Origem" />{Object.entries(rel.origens).sort((a, b) => b[1] - a[1]).map(([k, v]) => <BarChart key={k} label={k} value={v} max={rel.total} color={C.primary} />)}{!Object.keys(rel.origens).length && <div style={{ color: C.muted, fontSize: 13 }}>Nenhum dado.</div>}</Card>
+      <Card><SecTitle icon="🩹" title="Tipos de Ferida" />{Object.entries(rel.tipos).sort((a, b) => b[1] - a[1]).map(([k, v]) => <BarChart key={k} label={k} value={v} max={rel.total} color={C.primaryLight} />)}{!Object.keys(rel.tipos).length && <div style={{ color: C.muted, fontSize: 13 }}>Nenhum dado.</div>}</Card>
+      <Card><SecTitle icon="💊" title="Coberturas" />{Object.entries(rel.coberturas).sort((a, b) => b[1] - a[1]).map(([k, v]) => <BarChart key={k} label={k} value={v} max={Math.max(1, ...Object.values(rel.coberturas))} color={C.accent} />)}{!Object.keys(rel.coberturas).length && <div style={{ color: C.muted, fontSize: 13 }}>Nenhum dado.</div>}</Card>
+      <Card><SecTitle icon="⚠️" title="Complicações" />{Object.entries(rel.comps).sort((a, b) => b[1] - a[1]).map(([k, v]) => <BarChart key={k} label={k} value={v} max={rel.total} color={k === "Infecção" ? C.danger : C.accentWarm} />)}{!Object.keys(rel.comps).length && <div style={{ color: C.muted, fontSize: 13 }}>Nenhum dado.</div>}</Card>
+      {Object.keys(rel.wagner).length > 0 && <Card><SecTitle icon="🦶" title="Wagner — Pé Diabético" />{Object.entries(rel.wagner).sort().map(([k, v]) => { const g = parseInt(k.replace("Grau ", "")); return <BarChart key={k} label={k} value={v} max={rel.total} color={WAGNER[g]?.color || C.primary} />; })}</Card>}
+      {Object.keys(rel.npuap).length > 0 && <Card><SecTitle icon="🏥" title="NPUAP/EPUAP — Lesão por Pressão" />{Object.entries(rel.npuap).sort((a, b) => b[1] - a[1]).map(([k, v]) => { const n = NPUAP.find(x => x.estagio === k); return <BarChart key={k} label={k} value={v} max={rel.total} color={n?.cor || C.primary} />; })}</Card>}
+
+      {rel.lista.length > 0 && (
+        <Card>
+          <SecTitle icon="📅" title="Atendimentos do Período" />
+          {rel.lista.map(a => (
+            <div key={a.id} style={{ padding: "8px 0", borderBottom: `1px solid ${C.border}`, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
+                <strong>{a.nome}</strong><span style={{ color: C.muted }}>{fmtDate(a.dataAtendimento)}</span>
+              </div>
+              <div style={{ display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
+                <Badge label={a.origem} color={C.primaryLight} small />
+                <Badge label={a.tipoFerida} color={C.primary} small />
+                {(a.complicacoes || []).includes("Infecção") && <Badge label="⚠️ Infecção" color={C.danger} small />}
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LISTA DE ATENDIMENTOS
+// ═══════════════════════════════════════════════════════════════════════════════
+function ListaAtendimentos({ atendimentos, onVerPaciente }) {
+  const [busca, setBusca] = useState("");
+  const filtrados = atendimentos.filter(a =>
+    a.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    a.prontuario.includes(busca) ||
+    (a.tipoFerida || "").toLowerCase().includes(busca.toLowerCase()) ||
+    (a.origem || "").toLowerCase().includes(busca.toLowerCase())
+  );
+
+  // Agrupa por prontuário para mostrar apenas o último de cada paciente
+  const porPaciente = {};
+  filtrados.forEach(a => { if (!porPaciente[a.prontuario]) porPaciente[a.prontuario] = a; });
+  const lista = Object.values(porPaciente);
+
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="🔍 Nome, prontuário, tipo de ferida ou setor..."
+        style={{ width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", fontSize: 15, background: C.surface, outline: "none", boxSizing: "border-box", marginBottom: 14 }} />
+
+      {lista.length === 0 && (
+        <div style={{ textAlign: "center", color: C.muted, padding: 48, fontSize: 15, lineHeight: 2 }}>
+          {atendimentos.length === 0 ? (
+            <>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🩺</div>
+              <div>Nenhum atendimento registrado.</div>
+              <div>Toque em <strong>+ Novo</strong> para começar.</div>
+            </>
+          ) : "Nenhum resultado encontrado."}
+        </div>
+      )}
+
+      {lista.map(a => {
+        const ws = a.wagnerGrau != null ? WAGNER.find(w => w.grau === a.wagnerGrau) : null;
+        const ns = a.npuapEstagio ? NPUAP.find(n => n.estagio === a.npuapEstagio) : null;
+        const totalAtend = atendimentos.filter(x => x.prontuario === a.prontuario).length;
+        return (
+          <button key={a.prontuario} onClick={() => onVerPaciente(a.prontuario)}
+            style={{ width: "100%", textAlign: "left", background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: "14px", marginBottom: 10, cursor: "pointer", boxShadow: C.cardShadow }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 4 }}>
+              <div>
+                <div style={{ fontWeight: 700, color: C.text, fontSize: 15 }}>{a.nome}</div>
+                <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>Pront. {a.prontuario}{a.leito ? ` · ${a.leito}` : ""}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 12, color: C.muted }}>Último: {fmtDate(a.dataAtendimento)}</div>
+                <div style={{ fontSize: 11, color: C.primaryLight, fontWeight: 600, marginTop: 2 }}>{totalAtend} atendimento(s)</div>
+                {diasTrat(a.dataInicio, a.dataTermino) !== null && <div style={{ color: C.accent, fontSize: 12, fontWeight: 700 }}>{diasTrat(a.dataInicio, a.dataTermino)}d em trat.</div>}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 5, marginTop: 8, flexWrap: "wrap" }}>
+              <Badge label={a.origem} color={C.primaryLight} small />
+              <Badge label={a.tipoFerida || "—"} color={C.primary} small />
+              {ws && <Badge label={ws.label} color={ws.color} small />}
+              {ns && <Badge label={ns.estagio} color={ns.cor} small />}
+              {(a.complicacoes || []).includes("Infecção") && <Badge label="⚠️ Infecção" color={C.danger} small />}
+              {(a.fotos || []).length > 0 && <Badge label={`📷 ${a.fotos.length}foto`} color={C.accentWarm} small />}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// APP PRINCIPAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function App() {
+  const [tela, setTela] = useState("lista");
+  const [atendimentos, setAtendimentos] = useState([]);
+  const [prontuarioSel, setProntuarioSel] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+
+  // Carrega dados do IndexedDB ao iniciar
+  useEffect(() => {
+    dbGetAll().then(dados => {
+      setAtendimentos(dados);
+      setCarregando(false);
+    }).catch(() => setCarregando(false));
+  }, []);
+
+  const showToast = (msg, color = C.accent) => { setToast({ msg, color }); setTimeout(() => setToast(null), 3000); };
+
+  const handleSalvar = useCallback(async () => {
+    const dados = await dbGetAll();
+    setAtendimentos(dados);
+    setTela("lista");
+    showToast("✅ Atendimento salvo com sucesso!");
+  }, []);
+
+  const handleVerPaciente = (p) => { setProntuarioSel(p); setTela("prontuario"); };
+
+  const handleDeletar = async (id) => {
+    const dados = await dbGetAll();
+    setAtendimentos(dados);
+    const restantes = dados.filter(a => a.prontuario === prontuarioSel);
+    if (restantes.length === 0) setTela("lista");
+    showToast("🗑 Atendimento removido.", C.danger);
+  };
+
+  const vencidos = alertasVencidos(atendimentos, 7);
+
+  const TABS = [
+    { id: "lista", label: "Pacientes", icon: "📋" },
+    { id: "alertas", label: "Alertas", icon: "🚨", badge: vencidos.length },
+    { id: "relatorio", label: "Relatório", icon: "📊" },
+  ];
+
+  if (carregando) return (
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 48 }}>🩺</div>
+      <div style={{ fontWeight: 700, color: C.primary, fontSize: 18 }}>EstomaCare</div>
+      <div style={{ color: C.muted, fontSize: 14 }}>Carregando dados...</div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text }}>
+      {/* HEADER */}
+      <div style={{ background: C.headerBg, padding: "14px 16px 0", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 14px rgba(0,0,0,.22)" }}>
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 18, letterSpacing: .3 }}>🩺 EstomaCare</div>
+              <div style={{ color: "#7FB3D3", fontSize: 11 }}>Curativos & Estomaterapia · {atendimentos.length} registro(s)</div>
+            </div>
+            <button onClick={() => setTela("novo")}
+              style={{ background: C.accent, border: "none", borderRadius: 24, padding: "9px 20px", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 15, boxShadow: `0 2px 10px ${C.accent}99`, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 20, lineHeight: 1 }}>+</span> Novo
+            </button>
+          </div>
+          {tela !== "novo" && tela !== "prontuario" && (
+            <div style={{ display: "flex" }}>
+              {TABS.map(t => (
+                <button key={t.id} onClick={() => setTela(t.id)}
+                  style={{ flex: 1, padding: "9px 4px", border: "none", background: "transparent", color: tela === t.id ? "#fff" : "#7FB3D3", fontWeight: 700, cursor: "pointer", fontSize: 12, borderBottom: tela === t.id ? `3px solid ${C.accent}` : "3px solid transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, position: "relative" }}>
+                  <span style={{ fontSize: 17 }}>{t.icon}</span><span>{t.label}</span>
+                  {t.badge > 0 && <span style={{ position: "absolute", top: 4, right: "calc(50% - 22px)", background: C.danger, color: "#fff", borderRadius: 10, padding: "0 5px", fontSize: 10, fontWeight: 800, minWidth: 16, textAlign: "center" }}>{t.badge}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {(tela === "novo" || tela === "prontuario") && (
+            <div style={{ paddingBottom: 10 }}>
+              <button onClick={() => setTela("lista")} style={{ background: "none", border: "none", color: "#7FB3D3", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>← Voltar</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* CONTEÚDO */}
+      <div style={{ padding: "18px 12px 80px" }}>
+        {tela === "lista" && <ListaAtendimentos atendimentos={atendimentos} onVerPaciente={handleVerPaciente} />}
+        {tela === "novo" && <FormAtendimento onSalvar={handleSalvar} onCancelar={() => setTela("lista")} />}
+        {tela === "prontuario" && <ProntuarioPaciente prontuario={prontuarioSel} atendimentos={atendimentos} onVoltar={() => setTela("lista")} onDeletar={handleDeletar} />}
+        {tela === "relatorio" && <Relatorio atendimentos={atendimentos} />}
+        {tela === "alertas" && <PainelAlertas atendimentos={atendimentos} onVerPaciente={handleVerPaciente} />}
+      </div>
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: toast.color, color: "#fff", padding: "13px 26px", borderRadius: 30, fontWeight: 700, fontSize: 14, boxShadow: "0 4px 20px rgba(0,0,0,.25)", zIndex: 999, whiteSpace: "nowrap" }}>
+          {toast.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+  </script>
+
+  <script>
+    // ── Service Worker ────────────────────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .catch(()=>{
+          // Fallback: SW inline se não achar o arquivo
+          const blob = new Blob([`const V='estomacare-v3';
+self.addEventListener('install',e=>{self.skipWaiting();});
+self.addEventListener('activate',e=>{
+  e.waitUntil(
+    caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k))))
+    .then(()=>self.clients.claim())
+  );
+});
+self.addEventListener('fetch',e=>{
+  if(!e.request.url.startsWith('http'))return;
+  if(e.request.method!=='GET')return;
+  e.respondWith(
+    fetch(e.request).then(r=>{
+      const cl=r.clone();
+      caches.open(V).then(c=>c.put(e.request,cl));
+      return r;
+    }).catch(()=>caches.match(e.request))
+  );
+});`], {type:'application/javascript'});
+          navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+        });
+    }
+
+    // ── Banner instalar PWA (evento beforeinstallprompt) ──────────────────────
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('install-banner').classList.add('show');
+    });
+
+    document.getElementById('btn-install')?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('install-banner').classList.remove('show');
+    });
+
+    document.getElementById('btn-close')?.addEventListener('click', () => {
+      document.getElementById('install-banner').classList.remove('show');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('install-banner').classList.remove('show');
+    });
+
+    // ── Remove splash ─────────────────────────────────────────────────────────
+    const obs = new MutationObserver(() => {
+      const root = document.getElementById('root');
+      if (root && root.children.length > 0) {
+        obs.disconnect();
+        setTimeout(() => {
+          const s = document.getElementById('splash');
+          if (s) { s.classList.add('hide'); setTimeout(()=>s.remove(), 700); }
+        }, 500);
+      }
+    });
+    obs.observe(document.getElementById('root'), {childList:true, subtree:true});
+    setTimeout(() => {
+      const s = document.getElementById('splash');
+      if (s) { s.classList.add('hide'); setTimeout(()=>s.remove(), 700); }
+    }, 5000);
+  </script>
+
+</body>
+</html>
