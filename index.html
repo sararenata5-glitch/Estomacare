@@ -175,6 +175,25 @@ async function dbDeletar(id) {
   await sbFetch("DELETE", "atendimentos?id=eq." + id);
 }
 
+async function dbDeletarPaciente(prontuario) {
+  await sbFetch("DELETE", "atendimentos?prontuario=eq." + encodeURIComponent(prontuario));
+}
+
+async function dbVerificarEmail(email) {
+  const rows = await sbFetch("GET", "clientes?email=eq." + encodeURIComponent(email.trim().toLowerCase()) + "&select=*");
+  if (!rows || !rows.length) return { ok: false, motivo: "nao_encontrado" };
+  const cliente = rows[0];
+  if (cliente.ativo === false || cliente.ativo === "false" || cliente.ativo === 0) {
+    return { ok: false, motivo: "inativo" };
+  }
+  if (cliente.validade) {
+    const hoje = new Date();
+    const validade = new Date(cliente.validade + "T23:59:59");
+    if (validade < hoje) return { ok: false, motivo: "expirado", validade: cliente.validade };
+  }
+  return { ok: true, cliente };
+}
+
 async function dbExportar() {
   const todos = await dbGetAll();
   const limpo = todos.map(a => ({...a, fotos: []}));
@@ -797,7 +816,7 @@ function FormAtendimento({ onSalvar, onCancelar, prefill }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRONTUÁRIO INDIVIDUAL
 // ═══════════════════════════════════════════════════════════════════════════════
-function ProntuarioPaciente({ prontuario, atendimentos, onVoltar, onDeletar, onVerGaleria, onNovoAtendimento }) {
+function ProntuarioPaciente({ prontuario, atendimentos, onVoltar, onDeletar, onVerGaleria, onNovoAtendimento, onDeletarPaciente }) {
   const lista = atendimentos.filter(a => a.prontuario === prontuario);
   const ultimo = lista[0];
   if (!ultimo) return null;
@@ -808,6 +827,19 @@ function ProntuarioPaciente({ prontuario, atendimentos, onVoltar, onDeletar, onV
   const wagnerSel = ultimo.wagnerGrau != null ? WAGNER.find(w => w.grau === ultimo.wagnerGrau) : null;
   const npuapSel = ultimo.npuapEstagio ? NPUAP.find(n => n.estagio === ultimo.npuapEstagio) : null;
   const [confirmDel, setConfirmDel] = useState(null);
+  const [confirmDelPaciente, setConfirmDelPaciente] = useState(false);
+  const [excluindoPaciente, setExcluindoPaciente] = useState(false);
+
+  async function handleExcluirPaciente() {
+    setExcluindoPaciente(true);
+    try {
+      await dbDeletarPaciente(prontuario);
+      onDeletarPaciente();
+    } catch (e) {
+      setExcluindoPaciente(false);
+      alert("Erro ao excluir o cadastro. Tente novamente.");
+    }
+  }
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -817,10 +849,45 @@ function ProntuarioPaciente({ prontuario, atendimentos, onVoltar, onDeletar, onV
       {onNovoAtendimento && (
         <button onClick={() => onNovoAtendimento(prontuario)}
           style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: C.primary, color: "#fff",
-            fontWeight: 700, fontSize: 15, cursor: "pointer", marginBottom: 14, display: "flex", alignItems: "center",
+            fontWeight: 700, fontSize: 15, cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center",
             justifyContent: "center", gap: 8, boxShadow: `0 3px 10px ${C.primary}44` }}>
           🔄 Registrar Novo Atendimento deste Paciente
         </button>
+      )}
+
+      {/* Ação secundária: excluir cadastro completo do paciente */}
+      <button onClick={() => setConfirmDelPaciente(true)}
+        style={{ width: "100%", padding: "10px", borderRadius: 10, border: `1.5px solid ${C.danger}66`, background: "transparent",
+          color: C.danger, fontWeight: 600, fontSize: 13, cursor: "pointer", marginBottom: 14 }}>
+        🗑️ Excluir Cadastro deste Paciente
+      </button>
+
+      {confirmDelPaciente && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: C.surface, borderRadius: 16, padding: "24px 20px", width: "100%", maxWidth: 420 }}>
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 10 }}>⚠️</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: C.danger, textAlign: "center", marginBottom: 8 }}>
+              Excluir cadastro de {ultimo.nome}?
+            </div>
+            <div style={{ fontSize: 13, color: C.muted, textAlign: "center", marginBottom: 18, lineHeight: 1.5 }}>
+              Isso vai apagar <strong>todos os {lista.length} atendimento(s)</strong>, fotos e histórico deste paciente
+              permanentemente. Essa ação não pode ser desfeita.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDelPaciente(false)} disabled={excluindoPaciente}
+                style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: "transparent",
+                  color: C.muted, fontWeight: 700, cursor: "pointer" }}>
+                Cancelar
+              </button>
+              <button onClick={handleExcluirPaciente} disabled={excluindoPaciente}
+                style={{ flex: 1, padding: "12px", borderRadius: 10, border: "none", background: C.danger, color: "#fff",
+                  fontWeight: 700, cursor: excluindoPaciente ? "default" : "pointer", opacity: excluindoPaciente ? 0.7 : 1 }}>
+                {excluindoPaciente ? "Excluindo..." : "Excluir Definitivamente"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Cabeçalho do paciente */}
@@ -1603,6 +1670,13 @@ function App() {
     showToast("🗑 Atendimento removido.", C.danger);
   };
 
+  const handleDeletarPaciente = async () => {
+    const dados = await dbGetAll();
+    setAtendimentos(dados);
+    setTela("lista");
+    showToast("🗑 Cadastro do paciente excluído.", C.danger);
+  };
+
   const vencidos = alertasVencidos(atendimentos, 7);
 
   const TABS = [
@@ -1658,7 +1732,7 @@ function App() {
       <div style={{ padding: "18px 12px 80px" }}>
         {tela === "lista" && <ListaAtendimentos atendimentos={atendimentos} onVerPaciente={handleVerPaciente} onVerGaleria={p => { setProntuarioSel(p); setTela("galeria"); }} />}
         {tela === "novo" && <FormAtendimento prefill={prefillNovo} onSalvar={() => { setPrefillNovo(null); handleSalvar(); }} onCancelar={() => { setPrefillNovo(null); setTela("lista"); }} />}
-        {tela === "prontuario" && <ProntuarioPaciente prontuario={prontuarioSel} atendimentos={atendimentos} onVoltar={() => setTela("lista")} onDeletar={handleDeletar} onVerGaleria={() => setTela("galeria")} onNovoAtendimento={handleNovoAtendimentoPaciente} />}
+        {tela === "prontuario" && <ProntuarioPaciente prontuario={prontuarioSel} atendimentos={atendimentos} onVoltar={() => setTela("lista")} onDeletar={handleDeletar} onVerGaleria={() => setTela("galeria")} onNovoAtendimento={handleNovoAtendimentoPaciente} onDeletarPaciente={handleDeletarPaciente} />}
         {tela === "galeria" && <GaleriaPaciente prontuario={prontuarioSel} atendimentos={atendimentos} onVoltar={() => setTela("prontuario")} />}
         {tela === "relatorio" && <Relatorio atendimentos={atendimentos} />}
         {tela === "alertas" && <PainelAlertas atendimentos={atendimentos} onVerPaciente={handleVerPaciente} />}
@@ -1677,6 +1751,75 @@ function App() {
 
 
 
+
+function TelaEmail({ onVerificado }) {
+  const [email, setEmail] = useState("");
+  const [verificando, setVerificando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  async function handleVerificar() {
+    const valor = email.trim();
+    if (!valor || !valor.includes("@")) { setErro("Digite um e-mail válido."); return; }
+    setVerificando(true);
+    setErro("");
+    try {
+      const resultado = await dbVerificarEmail(valor);
+      if (resultado.ok) {
+        sessionStorage.setItem("ec_email_auth", "ok");
+        sessionStorage.setItem("ec_email", valor.toLowerCase());
+        onVerificado();
+      } else if (resultado.motivo === "nao_encontrado") {
+        setErro("E-mail não encontrado. Verifique se digitou corretamente ou entre em contato para liberar o acesso.");
+      } else if (resultado.motivo === "inativo") {
+        setErro("Este acesso está inativo. Entre em contato para reativar sua licença.");
+      } else if (resultado.motivo === "expirado") {
+        setErro(`Sua licença expirou em ${fmtDate(resultado.validade)}. Entre em contato para renovar.`);
+      } else {
+        setErro("Não foi possível verificar o acesso. Tente novamente.");
+      }
+    } catch (e) {
+      setErro("Erro de conexão. Verifique sua internet e tente novamente.");
+    }
+    setVerificando(false);
+  }
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#1E293B 0%,#0F172A 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",fontFamily:"'Segoe UI',system-ui,sans-serif"}}>
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{fontSize:56,marginBottom:8}}>🩺</div>
+        <div style={{color:"#fff",fontWeight:800,fontSize:26}}>Estoma<span style={{color:"#0F5C56"}}>Care</span></div>
+        <div style={{color:"#94A3B8",fontSize:12,marginTop:4}}>Curativos & Estomaterapia · CHPBG</div>
+      </div>
+      <div style={{background:"rgba(255,255,255,0.08)",borderRadius:20,padding:"26px 22px",width:"100%",maxWidth:340,border:"1px solid rgba(255,255,255,0.15)"}}>
+        <div style={{textAlign:"center",color:"#fff",fontWeight:600,fontSize:15,marginBottom:6}}>✉️ Verificação de Acesso</div>
+        <div style={{textAlign:"center",color:"#94A3B8",fontSize:12,marginBottom:18,lineHeight:1.5}}>Digite o e-mail cadastrado para liberar o uso do EstomaCare</div>
+        <input
+          type="email"
+          value={email}
+          onChange={e => { setEmail(e.target.value); setErro(""); }}
+          onKeyDown={e => e.key === "Enter" && !verificando && handleVerificar()}
+          placeholder="seu-email@exemplo.com"
+          autoCapitalize="none"
+          style={{ width:"100%", padding:"13px 14px", borderRadius:10, border:"1.5px solid rgba(255,255,255,0.25)",
+            background:"rgba(255,255,255,0.06)", color:"#fff", fontSize:15, outline:"none", boxSizing:"border-box", marginBottom:14 }}
+        />
+        {erro && (
+          <div style={{background:"rgba(147,65,63,0.25)",border:"1px solid #93413F",borderRadius:8,padding:"10px 12px",color:"#F3C6C6",fontSize:12,marginBottom:14,lineHeight:1.4}}>
+            {erro}
+          </div>
+        )}
+        <button onClick={handleVerificar} disabled={verificando}
+          style={{ width:"100%", padding:"13px", borderRadius:10, border:"none", background: verificando ? "#3F5064" : "#0F5C56",
+            color:"#fff", fontWeight:700, fontSize:15, cursor: verificando ? "default" : "pointer" }}>
+          {verificando ? "Verificando..." : "Verificar Acesso"}
+        </button>
+      </div>
+      <div style={{color:"#475569",fontSize:10,marginTop:24,textAlign:"center"}}>
+        Não tem acesso ainda? Entre em contato para adquirir sua licença.
+      </div>
+    </div>
+  );
+}
 
 const PIN_CORRETO = "120626";
 
@@ -1739,7 +1882,9 @@ function TelaPin({ onAutenticar }) {
 }
 
 function AppComAuth() {
+  const [emailOk, setEmailOk] = useState(sessionStorage.getItem("ec_email_auth")==="ok");
   const [autenticado, setAutenticado] = useState(sessionStorage.getItem("ec_auth")==="ok");
+  if (!emailOk) return React.createElement(TelaEmail, {onVerificado:()=>setEmailOk(true)});
   if (!autenticado) return React.createElement(TelaPin, {onAutenticar:()=>setAutenticado(true)});
   return React.createElement(App);
 }
