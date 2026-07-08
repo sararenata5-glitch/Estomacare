@@ -975,17 +975,17 @@ function Relatorio({ atendimentos }) {
       const todasFotos = atendsP.flatMap(a => (a.fotos || []).map(f => ({...f, dataAtend: a.dataAtendimento})))
         .sort((a,b) => a.data.localeCompare(b.data));
       if (!todasFotos.length) return "";
-      const imgs = todasFotos.map((f,i) => `
-        <div style="display:inline-block;margin:4px;text-align:center;vertical-align:top">
-          <img src="${f.src}" style="width:120px;height:90px;object-fit:cover;border-radius:6px;border:2px solid ${i===0?"#7F8C8D":i===todasFotos.length-1?"#1ABC9C":"#D5D8DC"}"/>
-          <div style="font-size:9px;color:#666;margin-top:2px">${i===0?"Inicial":i===todasFotos.length-1?"Atual":`Foto ${i+1}`}</div>
-          <div style="font-size:8px;color:#999">${fmtDate(f.data)}</div>
-          ${f.legenda?`<div style="font-size:8px;color:#555">${f.legenda}</div>`:""}
-        </div>`).join("");
-      return `<div style="margin:8px 0;padding:8px;background:#f8f9fa;border-radius:6px">
-        <div style="font-size:10px;font-weight:700;color:#1A5276;margin-bottom:6px">📷 Evolução Fotográfica (${todasFotos.length} foto${todasFotos.length>1?"s":""})</div>
-        <div>${imgs}</div>
-      </div>`;
+      const imgs = todasFotos.map((f,i) => {
+        const tag = i===0?"📌 Inicial":i===todasFotos.length-1?"✅ Atual":`Foto ${i+1}`;
+        const tagCor = i===0?"#7F8C8D":i===todasFotos.length-1?"#1ABC9C":"#5D6D7E";
+        return `<div class="foto-card">
+          <img src="${f.src}"/>
+          <div class="tag" style="color:${tagCor}">${tag}</div>
+          <div class="dt">${fmtDate(f.data)}</div>
+          ${f.legenda?`<div class="dt">${f.legenda}</div>`:""}
+        </div>`;
+      }).join("");
+      return `<div class="fotos-titulo">📷 Evolução Fotográfica (${todasFotos.length} foto${todasFotos.length>1?"s":""})</div><div>${imgs}</div>`;
     }
 
     const linhas = rel.lista.map(a => {
@@ -993,45 +993,112 @@ function Relatorio({ atendimentos }) {
       const ns = a.npuapEstagio || "—";
       const bs = a.braden && BRADEN.every(b => a.braden[b.id]) ? `${BRADEN.reduce((s, b) => s + (a.braden[b.id] || 0), 0)}pts` : "—";
       const fotos = fotosPacientePDF(a.prontuario);
-      return `<tr><td>${fmtDate(a.dataAtendimento)}</td><td>${a.nome}</td><td>${a.prontuario}</td><td>${a.origem || "—"}</td><td>${a.tipoFerida || "—"}</td><td>${a.localizacao || "—"}</td><td>${diasTrat(a.dataInicio, a.dataTermino) ?? "—"}d</td><td>${calcArea(a.comprimento, a.largura) || "—"}cm²</td><td>${(a.coberturas || []).join(", ") || "—"}</td><td>${(a.complicacoes || []).join(", ") || "—"}</td><td>${a.dor}/10</td><td>${bs}</td><td>${ws}</td><td>${ns}</td></tr>${fotos ? `<tr><td colspan="14">${fotos}</td></tr>` : ""}`;
+      return `<tr><td>${fmtDate(a.dataAtendimento)}</td><td>${a.nome}</td><td>${a.prontuario}</td><td>${a.origem || "—"}</td><td>${a.tipoFerida || "—"}</td><td>${a.localizacao || "—"}</td><td>${diasTrat(a.dataInicio, a.dataTermino) ?? "—"}d</td><td>${calcArea(a.comprimento, a.largura) || "—"}cm²</td><td>${(a.coberturas || []).join(", ") || "—"}</td><td>${(a.complicacoes || []).join(", ") || "—"}</td><td>${a.dor}/10</td><td>${bs}</td><td>${ws}</td><td>${ns}</td></tr>${fotos ? `<tr class="fotos-row"><td colspan="14">${fotos}</td></tr>` : ""}`;
     }).join("");
 
-    const bar = (obj, max) => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<li>${k}: <strong>${v}</strong> (${max ? Math.round(v / max * 100) : 0}%)</li>`).join("") || "<li>Sem dados</li>";
+    const barItem = (k, v, max, cor) => {
+      const pct = max ? Math.round(v / max * 100) : 0;
+      return `<div class="barrow">
+        <div class="barlabel"><span>${k}</span><span class="barval">${v} (${pct}%)</span></div>
+        <div class="bartrack"><div class="barfill" style="width:${pct}%;background:${cor}"></div></div>
+      </div>`;
+    };
+    const barList = (obj, max, cor) => {
+      const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
+      if (!entries.length) return `<div class="semdados">Sem dados neste período.</div>`;
+      return entries.map(([k, v]) => barItem(k, v, max, cor)).join("");
+    };
 
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório EstomaCare</title>
 <style>
-body{font-family:Arial,sans-serif;margin:20px;color:#1C2833;font-size:11px;}
-h1{color:#1A5276;font-size:17px;}h2{color:#1A5276;font-size:13px;margin:16px 0 6px;border-bottom:2px solid #D5D8DC;padding-bottom:4px;}
-.kpis{display:flex;gap:12px;margin:14px 0;flex-wrap:wrap;}
-.kpi{background:#F0F4F8;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;}
-.kpi .val{font-size:22px;font-weight:800;color:#1A5276;}.kpi .lbl{font-size:9px;color:#7F8C8D;text-transform:uppercase;}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-ul{margin:0;padding-left:16px;}li{margin-bottom:3px;}
-table{width:100%;border-collapse:collapse;font-size:9px;}th{background:#1A5276;color:#fff;padding:5px 3px;}
-td{padding:4px 3px;border-bottom:1px solid #D5D8DC;}tr:nth-child(even){background:#F8F9FA;}
-.footer{margin-top:24px;font-size:9px;color:#7F8C8D;text-align:center;border-top:1px solid #D5D8DC;padding-top:8px;}
+  @page { margin: 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;margin:0;color:#1C2833;font-size:13px;line-height:1.5;}
+  .header{background:linear-gradient(135deg,#1A5276 0%,#154360 100%);color:#fff;padding:22px 28px;border-radius:10px;margin-bottom:20px;}
+  .header .brand{display:flex;align-items:center;gap:12px;}
+  .header .brand .ic{font-size:32px;}
+  .header h1{margin:0;font-size:22px;font-weight:800;letter-spacing:.3px;}
+  .header .sub{color:#AED6F1;font-size:12px;margin-top:2px;}
+  .header .meta{margin-top:14px;display:flex;gap:26px;flex-wrap:wrap;font-size:11.5px;color:#D6EAF8;border-top:1px solid rgba(255,255,255,.25);padding-top:10px;}
+  .header .meta strong{color:#fff;}
+
+  h2.sectitle{color:#1A5276;font-size:15px;font-weight:800;margin:26px 0 12px;padding-bottom:6px;border-bottom:3px solid #1A5276;display:flex;align-items:center;gap:8px;}
+  h2.sectitle .n{background:#1A5276;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:6px 0 8px;}
+  .kpi{background:#F4F8FB;border:1px solid #D5E3ED;border-radius:10px;padding:14px 10px;text-align:center;}
+  .kpi .val{font-size:26px;font-weight:800;color:#1A5276;line-height:1.1;}
+  .kpi .lbl{font-size:10px;color:#5D6D7E;text-transform:uppercase;letter-spacing:.4px;margin-top:4px;font-weight:600;}
+
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+
+  .barrow{margin-bottom:9px;}
+  .barlabel{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;}
+  .barlabel span:first-child{font-weight:600;color:#1C2833;}
+  .barval{color:#7F8C8D;font-size:11px;}
+  .bartrack{background:#E5E9EC;border-radius:6px;height:9px;overflow:hidden;}
+  .barfill{height:9px;border-radius:6px;}
+  .semdados{color:#95A5A6;font-size:12px;font-style:italic;padding:4px 0;}
+
+  table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:6px;}
+  thead th{background:#1A5276;color:#fff;padding:8px 6px;font-weight:700;text-align:left;}
+  thead th:first-child{border-radius:6px 0 0 0;}
+  thead th:last-child{border-radius:0 6px 0 0;}
+  tbody td{padding:7px 6px;border-bottom:1px solid #E5E9EC;vertical-align:top;}
+  tbody tr:nth-child(even){background:#F8FAFB;}
+  .fotos-row td{background:#EFF4F8;padding:10px;}
+  .fotos-titulo{font-size:11px;font-weight:700;color:#1A5276;margin-bottom:8px;}
+  .foto-card{display:inline-block;margin:0 6px 6px 0;text-align:center;vertical-align:top;}
+  .foto-card img{width:110px;height:82px;object-fit:cover;border-radius:6px;display:block;}
+  .foto-card .tag{font-size:9px;font-weight:700;margin-top:3px;}
+  .foto-card .dt{font-size:8.5px;color:#95A5A6;}
+
+  .footer{margin-top:32px;font-size:10px;color:#95A5A6;text-align:center;border-top:1px solid #E5E9EC;padding-top:12px;}
+  .footer strong{color:#5D6D7E;}
+  .pagebreak{page-break-before:always;}
 </style></head><body>
-<h1>🩺 EstomaCare — Relatório de Curativos e Estomaterapia</h1>
-<div style="color:#7F8C8D;font-size:10px;">Período: <strong>${mesSel || "Todos os registros"}</strong> · Gerado em: ${new Date().toLocaleString("pt-BR")}</div>
+
+<div class="header">
+  <div class="brand"><span class="ic">🩺</span><div><h1>EstomaCare</h1><div class="sub">Relatório de Curativos e Estomaterapia</div></div></div>
+  <div class="meta">
+    <div>📅 Período: <strong>${mesSel || "Todos os registros"}</strong></div>
+    <div>🕐 Gerado em: <strong>${new Date().toLocaleString("pt-BR")}</strong></div>
+    <div>🏥 Complexo Hospitalar Padre Bento de Guarulhos</div>
+  </div>
+</div>
+
+<h2 class="sectitle"><span class="n">1</span> Indicadores Gerais</h2>
 <div class="kpis">
 <div class="kpi"><div class="val">${rel.total}</div><div class="lbl">Atendimentos</div></div>
 <div class="kpi"><div class="val">${rel.unicos}</div><div class="lbl">Pacientes Únicos</div></div>
-<div class="kpi"><div class="val" style="color:${parseFloat(rel.taxa) > 10 ? "#C0392B" : "#1ABC9C"}">${rel.taxa}%</div><div class="lbl">Taxa Infecção</div></div>
-<div class="kpi"><div class="val" style="color:#C0392B">${rel.infeccoes}</div><div class="lbl">Com Infecção</div></div>
+<div class="kpi"><div class="val" style="color:${parseFloat(rel.taxa) > 10 ? "#C0392B" : "#1ABC9C"}">${rel.taxa}%</div><div class="lbl">Taxa de Infecção</div></div>
+<div class="kpi"><div class="val" style="color:#C0392B">${rel.infeccoes}</div><div class="lbl">Casos c/ Infecção</div></div>
 </div>
+
+<h2 class="sectitle"><span class="n">2</span> Distribuição Clínica</h2>
 <div class="grid3">
-<div><h2>Por Origem</h2><ul>${bar(rel.origens, rel.total)}</ul></div>
-<div><h2>Tipos de Ferida</h2><ul>${bar(rel.tipos, rel.total)}</ul></div>
-<div><h2>Coberturas</h2><ul>${bar(rel.coberturas, Math.max(1, ...Object.values(rel.coberturas).concat([0])))}</ul></div>
+<div><h3 style="font-size:12.5px;color:#1A5276;margin:0 0 8px;">🏥 Por Origem</h3>${barList(rel.origens, rel.total, "#1A5276")}</div>
+<div><h3 style="font-size:12.5px;color:#1A5276;margin:0 0 8px;">🩹 Tipos de Ferida</h3>${barList(rel.tipos, rel.total, "#2E86C1")}</div>
+<div><h3 style="font-size:12.5px;color:#1A5276;margin:0 0 8px;">💊 Coberturas</h3>${barList(rel.coberturas, Math.max(1, ...Object.values(rel.coberturas).concat([0])), "#1ABC9C")}</div>
 </div>
-<div class="grid3">
-<div><h2>Complicações</h2><ul>${bar(rel.comps, rel.total)}</ul></div>
-<div><h2>Wagner (Pé Diabético)</h2><ul>${bar(rel.wagner, rel.total)}</ul></div>
-<div><h2>NPUAP/EPUAP (LPP)</h2><ul>${bar(rel.npuap, rel.total)}</ul></div>
+
+<div class="grid3" style="margin-top:18px;">
+<div><h3 style="font-size:12.5px;color:#1A5276;margin:0 0 8px;">⚠️ Complicações</h3>${barList(rel.comps, rel.total, "#E67E22")}</div>
+<div><h3 style="font-size:12.5px;color:#1A5276;margin:0 0 8px;">🦶 Wagner (Pé Diabético)</h3>${barList(rel.wagner, rel.total, "#8E44AD")}</div>
+<div><h3 style="font-size:12.5px;color:#1A5276;margin:0 0 8px;">🏥 NPUAP/EPUAP (LPP)</h3>${barList(rel.npuap, rel.total, "#C0392B")}</div>
 </div>
-<h2>Listagem Completa</h2>
-<table><tr><th>Data</th><th>Paciente</th><th>Pront.</th><th>Origem</th><th>Tipo</th><th>Local</th><th>Dur.</th><th>Área</th><th>Coberturas</th><th>Complic.</th><th>Dor</th><th>Braden</th><th>Wagner</th><th>NPUAP</th></tr>${linhas || "<tr><td colspan='14'>Nenhum atendimento</td></tr>"}</table>
-<div class="footer">EstomaCare v4 · Complexo Hospitalar Padre Bento de Guarulhos · Enfermagem — Estomaterapia<br>Documento gerado automaticamente para controle interno. Não substitui o prontuário hospitalar oficial.</div>
+
+<div class="pagebreak"></div>
+<h2 class="sectitle"><span class="n">3</span> Listagem Completa de Atendimentos</h2>
+<table>
+<thead><tr><th>Data</th><th>Paciente</th><th>Pront.</th><th>Origem</th><th>Tipo</th><th>Local</th><th>Dur.</th><th>Área</th><th>Coberturas</th><th>Complic.</th><th>Dor</th><th>Braden</th><th>Wagner</th><th>NPUAP</th></tr></thead>
+<tbody>${linhas || "<tr><td colspan='14' style='text-align:center;padding:20px;color:#95A5A6;'>Nenhum atendimento neste período</td></tr>"}</tbody>
+</table>
+
+<div class="footer">
+  <strong>EstomaCare v4.0</strong> · Complexo Hospitalar Padre Bento de Guarulhos · Enfermagem — Estomaterapia<br>
+  Documento gerado automaticamente para controle interno. Não substitui o prontuário hospitalar oficial.
+</div>
 </body></html>`;
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 600); }
